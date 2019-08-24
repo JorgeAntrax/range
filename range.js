@@ -1,12 +1,13 @@
 class Range {
-    constructor({ el = null, min = 1, max = 100, step = 1, multiple = false, call = null }) {
+    constructor({ el = null, min = 1, max = 100, step = 1, multiple = false, move = null, change = null }) {
         this.parent = el !== null ? document.querySelector(el) : console.error('property el invalid');
         this.idRange = `${el}__input_range`;
         this.min = min == 0 ? 1 : min;
         this.max = max;
         this.step = step;
         this.multiple = multiple;
-        this.call = call;
+        this.move = move;
+        this.change = change;
         this.value = 1;
         this.values = {};
 
@@ -17,7 +18,7 @@ class Range {
 
         if (el !== null) {
             this.print(this.idRange);
-            this.addListener(this.parent, this.call);
+            this.addListener(this.parent, this.move, this.change);
         }
 
     }
@@ -35,6 +36,7 @@ class Range {
         align-items: center;
         flex-wrap: nowrap;
       }
+      
       oh-range .oh-range {
         -webkit-appearance: none;
         -moz-appearance: none;
@@ -64,9 +66,19 @@ class Range {
         cursor: pointer;
         transition: box-shadow 0.25s ease-out;
       }
-      oh-range .oh-range::-webkit-slider-thumb:hover {
+      oh-range .oh-range:not([disabled])::-webkit-slider-thumb:hover {
         box-shadow: 0 0 0 5px rgba(0, 0, 0, 0.3);
       }
+
+      oh-range[disabled],
+      oh-range[disabled] * {
+        pointer-events: none !important;
+        cursor:none;
+    }
+
+    oh-range[disabled] {
+        opacity: 0.5;
+    }
     `;
 
         if (this.multiple) {
@@ -82,12 +94,22 @@ class Range {
 
 
         let $styles = document.createElement('style');
+        $styles.setAttribute('component', "range");
         $styles.textContent = $style;
-        document.querySelector('head').appendChild($styles);
+
+        if (!document.querySelector('head [component="range"]')) {
+            document.querySelector('head').appendChild($styles);
+        }
+
         this.parent.innerHTML = $widget;
     }
 
-    addListener($parent, callback) {
+    addListener($parent, move, change) {
+        if (change !== null) {
+            $parent.addEventListener('change', $e => {
+                change.call(this);
+            }, true);
+        }
         $parent.addEventListener('input', $e => {
             const $element = $e.target;
             if (this.multiple) {
@@ -96,8 +118,8 @@ class Range {
                 this.updateRange($element);
             }
 
-            if (callback !== null) {
-                callback.call();
+            if (move !== null) {
+                move.call(this);
             }
         }, true);
     }
@@ -117,7 +139,6 @@ class Range {
         } else {
             this.setValue($element.value);
         }
-        console.log(this.values);
     }
 
     minValue($val) {
